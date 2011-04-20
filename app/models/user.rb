@@ -13,6 +13,9 @@
 class User < ActiveRecord::Base
   attr_accessor :password   # virtual attribute
   attr_accessible :name, :email, :password, :password_confirmation
+
+  has_many :microposts, :dependent => :destroy
+
   email_regex = /\A[\w+\-.]+@[a-z\d\-.]+\.[a-z]+\z/i
 
   validates :name, :presence => true, :length =>{:maximum=>50}
@@ -41,6 +44,11 @@ class User < ActiveRecord::Base
   def self.authenticate_with_salt(id, cookie_salt)
     user = find_by_id(id)
     (user && user.salt == cookie_salt)? user : nil
+  end
+
+  # temporary implementation 4/17/11
+  def feed
+    Micropost.where("user_id = ?", id)
   end
 
   private

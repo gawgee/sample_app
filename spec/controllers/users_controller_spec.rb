@@ -68,6 +68,13 @@ describe UsersController do
       response.should have_selector("h1>img",:class=>"gravatar")
     end
 
+    it "should show the user's microposts" do
+      mp1 = Factory(:micropost, :user=>@user, :content=>"Foo bar")
+      mp2 = Factory(:micropost, :user=>@user, :content=>"Bax quuz")
+      get :show, :id => @user
+      response.should have_selector("span.content", :content => mp1.content)
+      response.should have_selector("span.content", :content => mp2.content)
+    end
   end # }  end GET show block
 
   describe "POST 'create'" do   # {
@@ -283,7 +290,28 @@ describe UsersController do
         response.should have_selector("a", :href => "/users?page=2",
                                            :content => "Next")
       end
+
+      it "should not have delete links" do
+        get :index
+        response.should_not have_selector("a", :content => "delete")
+      end
     end # } end of sign-in users for GET index
+
+    describe "as an admin user" do
+
+      before(:each) do
+        admin = Factory(:user, :email=>"admin@example.com", :admin=>true)
+        test_sign_in(admin)
+        second = Factory(:user, :name=>"Bob", :email=>"another@example.com")
+        third = Factory(:user, :name=>"Ben", :email=>"another@example.net")
+      end
+
+      it "should have delete links" do
+        get :index
+        response.should have_selector("a", :content => "delete")
+      end
+    end
+
   end # } end of GET index
 
   describe "DELETE 'destroy'" do # {
@@ -307,11 +335,11 @@ describe UsersController do
       end
     end
 
-    describe "as an admin user" do
+    describe "as an admin user" do # {
 
       before(:each) do
-        admin = Factory(:user, :email=>"admin@example.com", :admin=>true)
-        test_sign_in(admin)
+        @admin = Factory(:user, :email=>"admin@example.com", :admin=>true)
+        test_sign_in(@admin)
       end
 
       it "should destroy the user" do
@@ -324,7 +352,13 @@ describe UsersController do
         delete :destroy, :id => @user
         response.should redirect_to(users_path)
       end
-    end
+
+      it "should not destroy himself" do
+        delete :destroy, :id => @admin
+        response.should redirect_to(users_path)
+        flash[:notice].should =~ /admin cannot destroy himself/i
+      end
+    end # } end of admin block in DELETE
   end # } end DELETE destroy block
 
 end
